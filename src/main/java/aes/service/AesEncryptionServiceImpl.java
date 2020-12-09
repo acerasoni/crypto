@@ -2,31 +2,42 @@ package aes.service;
 
 import aes.api.AesEncryptionService;
 import aes.model.AesKey;
-import org.apache.commons.lang3.ArrayUtils;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Objects;
 
-/**
- * Assumptions: input is a factor of 128 bits
- */
-public class AesEncryptionServiceImpl<T> implements AesEncryptionService {
+public class AesEncryptionServiceImpl implements AesEncryptionService {
 
-    private final byte[][] state = new byte[4][4];
-    private List<byte[]> blocks;
-
-            /*
-            1. Split input into 128 bit chunks
-            2. Write to state
-            3. Read from state
-             */
-
+    /**
+     * The encrypt method receives 128-bit chunks of data and encrypts them with the secret key
+     *
+     * @param plain
+     * @param aesKey
+     * @return encrypted byte[] chunk
+     */
+    @Override
     public byte[] encrypt(final byte[] plain, final AesKey aesKey) {
-        blocks = castFromGenericListToByteList(splitArray(castFromByteArrayToGenericArray(plain), 16));
+        Objects.requireNonNull(plain);
+        Objects.requireNonNull(aesKey);
 
-        return (byte[]) ((Object) mergeArrays(castFromByteListToGenericList(blocks)));
+        if (!isCorrectChunkSize(plain)) {
+            // throw new AesEncryptionServiceException;
+        }
+
+        byte[][] state = loadState(plain);
+
+        addRoundKey(state, aesKey);
+        for (int i = 0; i < aesKey.getRounds() - 1; i++) {
+            subBytes(state);
+            shiftRows(state);
+            mixColumns(state);
+            addRoundKey(state, aesKey);
+        }
+
+        subBytes(state);
+        shiftRows(state);
+        addRoundKey(state, aesKey);
+
+        return unloadState(state);
     }
 
     @Override
@@ -34,34 +45,49 @@ public class AesEncryptionServiceImpl<T> implements AesEncryptionService {
         return new byte[0];
     }
 
-    private T[] castFromByteArrayToGenericArray(final byte[] plain) {
-        return (T[]) Array.newInstance(plain);
+    private void subBytes(final byte[][] state) {
+        //TODO
     }
 
-    private List<byte[]> castFromGenericListToByteList(final List<T[]> plain) {
-        return (List<byte[]>) ((Object) plain);
+    private void shiftRows(final byte[][] state) {
+        //TODO
     }
 
-    private List<T[]> castFromByteListToGenericList(final List<byte[]> plain) {
-        return (List<T[]>) ((Object) plain);
+    private void mixColumns(final byte[][] state) {
+        //TODO
     }
 
-    private List<T[]> splitArray(final T[] input, final int chunkSize) {
-        final List<T[]> blocks = new ArrayList<>();
-        final int size = input.length % chunkSize;
-        for (int i = 0; i < size; i++) {
-            blocks.add(Arrays.copyOfRange(input, i * chunkSize, i * chunkSize + chunkSize));
-        }
-        return blocks;
+    private void addRoundKey(final byte[][] state, final AesKey aesKey) {
+        //TODO
     }
 
-    private T[] mergeArrays(final List<T[]> input) {
-        T[] mergeTarget = null;
-        for (T[] array : input) {
-            mergeTarget = (T[]) ArrayUtils.add(mergeTarget, array);
+    public static byte[] unloadState(final byte[][] state) {
+        byte[] plain = new byte[16];
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                int offset = i * 4;
+                plain[offset + j] = state[i][j];
+            }
         }
 
-        return mergeTarget;
+        return plain;
+    }
+
+    public static byte[][] loadState(final byte[] input) {
+        byte[][] state = new byte[4][4];
+
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                int offset = i + j;
+                state[i][j] = input[offset];
+            }
+        }
+
+        return state;
+    }
+
+    private boolean isCorrectChunkSize(byte[] plain) {
+        return plain.length == 16;
     }
 
 }
